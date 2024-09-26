@@ -45,8 +45,6 @@ module Scheemer
       end
 
       def respond_to_missing?(name, include_private = false)
-        key_name = name.camelcase
-
         internal_property?(name) || super
       end
 
