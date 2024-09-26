@@ -21,6 +21,20 @@ RSpec.describe Scheemer::Params do
         expect(record.someValue).to eql("testing")
       end
     end
+
+    context "with a list root node" do
+      let(:klass) do
+        Class.new do
+          extend Scheemer::Params::DSL
+        end
+      end
+
+      subject(:record) { klass.new([{ name: "testing" }]) }
+
+      it "does not resolve" do
+        expect(record.respond_to?(:name)).to be false
+      end
+    end
   end
 
   describe ".on_missing" do

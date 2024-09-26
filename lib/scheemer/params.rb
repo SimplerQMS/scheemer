@@ -39,14 +39,21 @@ module Scheemer
 
       def method_missing(name, *args, &)
         key_name = name.to_sym.camelcase
-        return @params.fetch(key_name) if @params.key?(key_name)
+        return @params.fetch(key_name) if internal_property?(key_name)
 
         super
       end
 
       def respond_to_missing?(name, include_private = false)
         key_name = name.camelcase
-        @params.key?(key_name) || super
+
+        internal_property?(name) || super
+      end
+
+      def internal_property?(name)
+        return unless @params.is_a?(Hash)
+
+        @params.key?(name.camelcase)
       end
     end
   end
