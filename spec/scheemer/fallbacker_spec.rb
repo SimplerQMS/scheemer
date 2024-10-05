@@ -61,7 +61,7 @@ RSpec.describe Scheemer::Fallbacker do
     subject(:data) do
       described_class.apply(
         { content: { key: "old-key" } },
-        { "content.new_key" => lambda { "dynamic-value" } }
+        { "content.new_key" => -> { "dynamic-value" } }
       )
     end
 

@@ -4,7 +4,7 @@ require "dry-schema"
 
 Dry::Schema.load_extensions(:hints, :json_schema)
 
-require_relative "./errors"
+require_relative "errors"
 
 module Scheemer
   class Schema
@@ -52,7 +52,7 @@ module Scheemer
       validate(params).tap do |result|
         next if result.success?
 
-        raise InvalidSchemaError, result.messages.to_h
+        raise InvalidSchemaError, result
       end
     end
 

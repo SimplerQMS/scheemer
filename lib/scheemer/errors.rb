@@ -13,8 +13,18 @@ module Scheemer
   end
 
   class InvalidSchemaError < Error
+    def initialize(result)
+      super
+
+      @result = result
+    end
+
     def message
-      "#{title}: #{super}"
+      "#{title}: #{violations}"
+    end
+
+    def violations
+      @result.errors.to_h
     end
 
     private

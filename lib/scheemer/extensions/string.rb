@@ -8,30 +8,30 @@ module Scheemer
         [first, rest.collect(&:capitalize)].join
       end
       UNDERSCORER = lambda do |value|
-        value.gsub(/::/, '/').
-          gsub(/([A-Z]+)([A-Z][a-z])/,'\1_\2').
-          gsub(/([a-z\d])([A-Z])/,'\1_\2').
-          tr("-", "_").
-          downcase
+        value.gsub(/::/, "/")
+             .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
+             .gsub(/([a-z\d])([A-Z])/, '\1_\2')
+             .tr("-", "_")
+             .downcase
       end
 
       refine Symbol do
         def camelcase
-          CAMELCASER.(self).to_sym
+          CAMELCASER.call(self).to_sym
         end
 
         def underscore
-          UNDERSCORER.(self).to_sym
+          UNDERSCORER.call(self).to_sym
         end
       end
 
       refine String do
         def camelcase
-          CAMELCASER.(self)
+          CAMELCASER.call(self)
         end
 
         def underscore
-          UNDERSCORER.(self)
+          UNDERSCORER.call(self)
         end
       end
     end
