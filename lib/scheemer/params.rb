@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require_relative "./fallbacker"
+require_relative "fallbacker"
 
-require_relative "./extensions/string"
+require_relative "extensions/string"
 
 module Scheemer
   # This handles the conversion from the HTTP linguo (camelCase)

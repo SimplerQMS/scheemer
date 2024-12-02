@@ -16,7 +16,7 @@ module Scheemer
 
       root_node = permitted.to_h.values.first
 
-      super root_node, data.to_h
+      super(root_node, data.to_h)
     end
   end
 end
