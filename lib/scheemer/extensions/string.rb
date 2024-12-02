@@ -21,7 +21,7 @@ module Scheemer
         end
 
         def underscore
-          UNDERSCORER.call(self).to_sym
+          UNDERSCORER.call(to_s).to_sym
         end
       end
 

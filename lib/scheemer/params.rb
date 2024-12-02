@@ -37,21 +37,30 @@ module Scheemer
         @params.to_h.transform_keys { |key| key.to_s.underscore }
       end
 
+      def multi_slice(key, &block)
+        return unless @params.is_a?(Hash)
+
+        slices = [
+          ->(name) { name.underscore },
+          ->(name) { name.camelcase },
+          ->(name) { name }
+        ].map { |a| @params.slice(a.call(key)) }
+          .reject(&:empty?)
+
+        return if slices.empty?
+
+        slices.first
+      end
+
       def method_missing(name, *args, &)
-        key_name = name.to_sym.camelcase
-        return @params.fetch(key_name) if internal_property?(key_name)
+        slice = multi_slice(name.to_sym)
+        return slice.values.first if slice&.any?
 
         super
       end
 
       def respond_to_missing?(name, include_private = false)
-        internal_property?(name) || super
-      end
-
-      def internal_property?(name)
-        return unless @params.is_a?(Hash)
-
-        @params.key?(name.camelcase)
+        multi_slice(name.to_sym)&.any? || super
       end
     end
   end
