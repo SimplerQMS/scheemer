@@ -25,8 +25,8 @@ module Scheemer
         @schema.validate!(params)
       end
 
-      def json_schema
-        @schema.json_schema
+      def json_schema(loose: false)
+        @schema.json_schema(loose:)
       end
 
       private
@@ -56,8 +56,8 @@ module Scheemer
       end
     end
 
-    def json_schema
-      @definitions.json_schema
+    def json_schema(loose: false)
+      @definitions.json_schema(loose:)
     end
   end
 end
