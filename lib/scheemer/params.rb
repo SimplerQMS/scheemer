@@ -27,6 +27,8 @@ module Scheemer
     end
 
     module InstanceMethods
+      include Enumerable
+
       def initialize(params, data = {})
         @params = Fallbacker.apply(params, self.class.params_fallbacks)
 
@@ -35,6 +37,12 @@ module Scheemer
 
       def to_h
         @params.to_h.transform_keys { |key| key.to_s.underscore }
+      end
+
+      def each(&block)
+        return enum_for(:each) unless block_given?
+
+        @params.each(&block)
       end
 
       def multi_slice(key, &block)

@@ -12,7 +12,7 @@ RSpec.describe Scheemer::Schema do
 
     context "with the required data" do
       it do
-        expect { schema.validate!({ test: "something" }) }
+        expect { schema.validate!({test: "something"}) }
           .not_to raise_error
       end
     end
