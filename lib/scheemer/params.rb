@@ -37,6 +37,10 @@ module Scheemer
         @params.to_h.transform_keys { |key| key.to_s.underscore }
       end
 
+      def each(&block)
+        @params.each(&block)
+      end
+
       def multi_slice(key, &block)
         return unless @params.is_a?(Hash)
 
