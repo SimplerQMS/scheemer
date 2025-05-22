@@ -38,8 +38,19 @@ module Scheemer
       end
     end
 
+    module Types
+      include Dry::Types()
+
+      UUID_V7 = Strict::String.constrained(format: %r{^[0-9(a-f|A-F)]{8}-[0-9(a-f|A-F)]{4}-7[0-9(a-f|A-F)]{3}-[89ab][0-9(a-f|A-F)]{3}-[0-9(a-f|A-F)]{12}$})
+    end
+
+    TypeContainer = ::Dry::Schema::TypeContainer.new
+    TypeContainer.register("params.uuid_v7", Types::UUID_V7)
+
     def initialize(&)
       @definitions = ::Dry::Schema.Params do
+        config.types = TypeContainer
+
         instance_eval(&)
       end
     end
