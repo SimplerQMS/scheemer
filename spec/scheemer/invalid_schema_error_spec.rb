@@ -7,8 +7,8 @@ RSpec.describe Scheemer::InvalidSchemaError do
     Struct.new(:errors).new(
       {
         record: {
-          name: ["is missing"]
-        }
+          name: ["is missing"],
+        },
       }
     )
   end
@@ -25,8 +25,8 @@ RSpec.describe Scheemer::InvalidSchemaError do
     expect(error.violations).to eql(
       {
         record: {
-          name: ["is missing"]
-        }
+          name: ["is missing"],
+        },
       }
     )
   end

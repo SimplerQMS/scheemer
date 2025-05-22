@@ -39,21 +39,21 @@ module Scheemer
         @params.to_h.transform_keys { |key| key.to_s.underscore }
       end
 
-      def each(&block)
+      def each(&)
         return enum_for(:each) unless block_given?
 
-        @params.each(&block)
+        @params.each(&)
       end
 
-      def multi_slice(key, &block)
+      def multi_slice(key)
         return unless @params.is_a?(Hash)
 
         slices = [
           ->(name) { name.underscore },
           ->(name) { name.camelcase },
-          ->(name) { name }
+          ->(name) { name },
         ].map { |a| @params.slice(a.call(key)) }
-          .reject(&:empty?)
+                 .reject(&:empty?)
 
         return if slices.empty?
 

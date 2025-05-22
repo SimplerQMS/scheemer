@@ -41,7 +41,7 @@ module Scheemer
     module Types
       include Dry::Types()
 
-      UUID_V7 = Strict::String.constrained(format: %r{^[0-9(a-f|A-F)]{8}-[0-9(a-f|A-F)]{4}-7[0-9(a-f|A-F)]{3}-[89ab][0-9(a-f|A-F)]{3}-[0-9(a-f|A-F)]{12}$})
+      UUID_V7 = Strict::String.constrained(format: /^[0-9(a-f|A-F)]{8}-[0-9(a-f|A-F)]{4}-7[0-9(a-f|A-F)]{3}-[89ab][0-9(a-f|A-F)]{3}-[0-9(a-f|A-F)]{12}$/)
     end
 
     TypeContainer = ::Dry::Schema::TypeContainer.new

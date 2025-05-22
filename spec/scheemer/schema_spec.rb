@@ -13,7 +13,7 @@ RSpec.describe Scheemer::Schema do
 
     context "with the required data" do
       it do
-        expect { schema.validate!({test: "something"}) }
+        expect { schema.validate!({ test: "something" }) }
           .not_to raise_error
       end
     end
@@ -34,14 +34,14 @@ RSpec.describe Scheemer::Schema do
 
       context "with a valid value" do
         it do
-          expect { schema.validate!({id: "0196d94e-dde8-74d3-a42e-ee38fa6442a8"}) }
+          expect { schema.validate!({ id: "0196d94e-dde8-74d3-a42e-ee38fa6442a8" }) }
             .not_to raise_error
         end
       end
 
       context "with an invalid value" do
         it do
-          expect { schema.validate!({id: "asd"}) }
+          expect { schema.validate!({ id: "asd" }) }
             .to raise_error(Scheemer::InvalidSchemaError)
         end
       end

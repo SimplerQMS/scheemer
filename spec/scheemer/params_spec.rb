@@ -11,7 +11,7 @@ RSpec.describe Scheemer::Params do
         end
       end
 
-      subject(:record) { klass.new({someValue: "testing"}) }
+      subject(:record) { klass.new({ someValue: "testing" }) }
 
       it "allows access to fields using underscored accessors" do
         expect(record.some_value).to eql("testing")
@@ -29,7 +29,7 @@ RSpec.describe Scheemer::Params do
         end
       end
 
-      subject(:record) { klass.new([{name: "testing"}]) }
+      subject(:record) { klass.new([{ name: "testing" }]) }
 
       it "does not resolve" do
         expect(record.respond_to?(:name)).to be false
@@ -44,9 +44,9 @@ RSpec.describe Scheemer::Params do
       end
     end
 
-    subject(:record) { klass.new({"someKey" => ["testing"]}) }
+    subject(:record) { klass.new({ "someKey" => ["testing"] }) }
 
-    it { expect(record.respond_to?(:each)).to be_truthy }
+    it { expect(record).to respond_to(:each) }
 
     it "can iterate through the params" do
       expect(record.map(&:to_a)).to eql([["someKey", ["testing"]]])
@@ -61,15 +61,15 @@ RSpec.describe Scheemer::Params do
     end
 
     context "with a hash node" do
-      subject(:record) { klass.new({"someKey" => ["testing"]}) }
+      subject(:record) { klass.new({ "someKey" => ["testing"] }) }
 
       it "can iterate through the params" do
-        expect(record.to_h).to eql({"some_key" => ["testing"]})
+        expect(record.to_h).to eql({ "some_key" => ["testing"] })
       end
     end
 
     context "with a list node" do
-      subject(:record) { klass.new([{name: "someKey"}, {name: "testing"}]) }
+      subject(:record) { klass.new([{ name: "someKey" }, { name: "testing" }]) }
 
       it "can iterate through the params" do
         expect { record.to_h }.to raise_error(TypeError)
@@ -83,14 +83,14 @@ RSpec.describe Scheemer::Params do
         Class.new do
           extend Scheemer::Params::DSL
 
-          on_missing path: "content", fallback_to: {fall: "back"}
+          on_missing path: "content", fallback_to: { fall: "back" }
         end
       end
 
-      subject(:record) { klass.new({someValue: "testing"}) }
+      subject(:record) { klass.new({ someValue: "testing" }) }
 
       it "allows access to fields using underscored accessors" do
-        expect(record.content).to eql({fall: "back"})
+        expect(record.content).to eql({ fall: "back" })
         expect(record.someValue).to eql("testing")
       end
     end

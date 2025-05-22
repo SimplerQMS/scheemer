@@ -21,7 +21,7 @@ RSpec.describe Scheemer do
         end
       end
 
-      subject(:record) { klass.new({root: {someValue: "testing"}}) }
+      subject(:record) { klass.new({ root: { someValue: "testing" } }) }
 
       it "allows access to fields using underscored accessors" do
         expect(record.some_value).to eql("testing")
@@ -45,7 +45,7 @@ RSpec.describe Scheemer do
         expect_any_instance_of(klass)
           .to receive(:validate!).with(other_data: "it works!")
 
-        klass.new({root: {someValue: "testing"}}, other_data: "it works!")
+        klass.new({ root: { someValue: "testing" } }, other_data: "it works!")
       end
     end
 
@@ -74,9 +74,9 @@ RSpec.describe Scheemer do
         end
       end
 
-      subject(:record) { klass.new({root: {name: "testing"}}) }
+      subject(:record) { klass.new({ root: { name: "testing" } }) }
 
-      it { expect(record.respond_to?(:each)).to be_truthy }
+      it { expect(record).to respond_to(:each) }
     end
 
     context "with a list as the root node" do
@@ -92,7 +92,7 @@ RSpec.describe Scheemer do
         end
       end
 
-      subject(:record) { klass.new({root: {children: ["testing"]}}) }
+      subject(:record) { klass.new({ root: { children: ["testing"] } }) }
 
       it "can iterate through the params" do
         expect(record.map(&:to_a)).to eql([[:children, ["testing"]]])
@@ -110,10 +110,10 @@ RSpec.describe Scheemer do
         end
       end
 
-      subject(:record) { klass.new({children: [{name: "testing"}]}) }
+      subject(:record) { klass.new({ children: [{ name: "testing" }] }) }
 
       it "can iterate through the params" do
-        expect(record.first).to eql({name: "testing"})
+        expect(record.first).to eql({ name: "testing" })
       end
     end
   end
