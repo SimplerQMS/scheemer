@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    scheemer (3.4.0)
+    scheemer (3.5.0)
       dry-schema (~> 1.16)
 
 GEM
