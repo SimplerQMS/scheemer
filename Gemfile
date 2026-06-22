@@ -5,9 +5,9 @@ source "https://rubygems.org"
 # Specify your gem's dependencies in scheemer.gemspec
 gemspec
 
-gem "rake", "~> 13.0"
-gem "rspec", "~> 3.0"
-gem "rubocop", "~> 1.21"
-gem "rubocop-rspec", "~> 2.12.1"
+gem "rake", "~> 13.4"
+gem "rspec", "~> 3.13"
+gem "rubocop", "~> 1.88"
+gem "rubocop-rspec", "~> 3.10"
 
 gem "pry-nav", "~> 1.0"

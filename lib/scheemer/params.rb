@@ -49,11 +49,11 @@ module Scheemer
         return unless @params.is_a?(Hash)
 
         slices = [
-          ->(name) { name.underscore },
-          ->(name) { name.camelcase },
+          lambda(&:underscore),
+          lambda(&:camelcase),
           ->(name) { name },
         ].map { |a| @params.slice(a.call(key)) }
-                 .reject(&:empty?)
+         .reject(&:empty?)
 
         return if slices.empty?
 

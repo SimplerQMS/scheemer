@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "./extensions/hash"
+require_relative "extensions/hash"
 
 module Scheemer
   module Fallbacker
@@ -8,7 +8,7 @@ module Scheemer
 
     using Extensions::Bury
 
-    def apply(params, fallbacks)
+    def apply(params, fallbacks) # rubocop:todo Metrics/MethodLength
       cloned_params = params.dup
 
       fallbacks.each do |(path, value)|

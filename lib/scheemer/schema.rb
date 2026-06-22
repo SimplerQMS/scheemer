@@ -41,7 +41,9 @@ module Scheemer
     module Types
       include Dry::Types()
 
+      # rubocop:todo Layout/LineLength
       UUID_V7 = Strict::String.constrained(format: /^[0-9(a-f|A-F)]{8}-[0-9(a-f|A-F)]{4}-7[0-9(a-f|A-F)]{3}-[89ab][0-9(a-f|A-F)]{3}-[0-9(a-f|A-F)]{12}$/)
+      # rubocop:enable Layout/LineLength
     end
 
     TypeContainer = ::Dry::Schema::TypeContainer.new

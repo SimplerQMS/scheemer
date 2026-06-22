@@ -1,8 +1,8 @@
-require:
+plugins:
   - rubocop-rspec
 
 AllCops:
-  TargetRubyVersion: 3.1
+  TargetRubyVersion: 3.2
   NewCops: enable
   Exclude:
     - bin/**/*
@@ -21,13 +21,18 @@ Metrics/BlockLength:
     - spec/**/*
 
 Metrics/MethodLength:
-  CountAsOne: [hash, array, heredoc]
+  CountAsOne:
+    - hash
+    - array
+    - heredoc
 
 RSpec/AnyInstance:
   Enabled: false
 
 RSpec/ExampleLength:
-  CountAsOne: [hash, array]
+  CountAsOne:
+    - hash
+    - array
 
 RSpec/LeadingSubject:
   Enabled: false

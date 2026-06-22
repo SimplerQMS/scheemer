@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.summary = "Request Parameter schema enforment for Assembly Voting systems"
   spec.homepage = "https://github.com/aion-dk/scheemer"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 3.1"
+  spec.required_ruby_version = ">= 3.2"
 
   # spec.metadata["allowed_push_host"] = "TODO: Set to your gem server 'https://example.com'"
 
@@ -31,7 +31,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   # Uncomment to register a new dependency of your gem
-  spec.add_dependency "dry-schema", "~> 1.13"
+  spec.add_dependency "dry-schema", "~> 1.16"
 
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html
