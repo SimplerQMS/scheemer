@@ -60,6 +60,12 @@ module Scheemer
         raise KeyError, "key not found: #{key.inspect}"
       end
 
+      def key?(key)
+        multi_slice(key)&.any? || false
+      end
+
+      alias has_key? key?
+
       def multi_slice(key)
         return unless @params.is_a?(Hash)
 

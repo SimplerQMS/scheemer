@@ -101,6 +101,25 @@ RSpec.describe Scheemer::Params do
     end
   end
 
+  describe "#key?" do
+    let(:klass) do
+      Class.new do
+        extend Scheemer::Params::DSL
+      end
+    end
+
+    subject(:record) { klass.new({ someValue: "testing" }) }
+
+    it "recognizes normalized keys" do
+      expect(record.key?(:some_value)).to be true
+      expect(record.has_key?("someValue")).to be true
+    end
+
+    it "returns false for a missing key" do
+      expect(record.key?(:missing)).to be false
+    end
+  end
+
   describe "#to_h" do
     let(:klass) do
       Class.new do
