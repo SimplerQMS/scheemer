@@ -12,14 +12,10 @@ module Scheemer
 
     def params_mode(mode, root: nil)
       unless PARAMS_MODES.include?(mode)
-        raise ArgumentError, "Expected params mode to be one of: #{PARAMS_MODES.join(", ")}"
+        raise ArgumentError, "Expected params mode to be one of: #{PARAMS_MODES.join(', ')}"
       end
-      if mode == :wrapped && root.nil?
-        raise ArgumentError, "Expected wrapped params mode to specify a root"
-      end
-      if mode == :flat && root
-        raise ArgumentError, "Flat params mode does not accept a root"
-      end
+      raise ArgumentError, "Expected wrapped params mode to specify a root" if mode == :wrapped && root.nil?
+      raise ArgumentError, "Flat params mode does not accept a root" if mode == :flat && root
 
       @params_mode_configuration = { mode:, root: root&.to_sym }.freeze
     end
