@@ -139,6 +139,38 @@ RSpec.describe Scheemer::Params do
     end
   end
 
+  describe "Hash-compatible readers" do
+    let(:klass) do
+      Class.new do
+        extend Scheemer::Params::DSL
+      end
+    end
+
+    subject(:record) do
+      klass.new({ someValue: { nested_key: "testing" }, otherValue: 1 })
+    end
+
+    it "digs through a normalized top-level key" do
+      expect(record.dig(:some_value, :nested_key)).to eql("testing")
+    end
+
+    it "returns multiple normalized values" do
+      expect(record.values_at(:some_value, "other_value", :missing))
+        .to eql([{ nested_key: "testing" }, 1, nil])
+    end
+
+    it "reports its size and emptiness" do
+      expect(record.size).to eq(2)
+      expect(record.length).to eq(2)
+      expect(record).not_to be_empty
+    end
+
+    it "supports implicit hash conversion" do
+      expect(Hash(record))
+        .to eql({ "some_value" => { nested_key: "testing" }, "other_value" => 1 })
+    end
+  end
+
   describe "#to_h" do
     let(:klass) do
       Class.new do

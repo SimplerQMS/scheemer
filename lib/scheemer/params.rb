@@ -41,6 +41,8 @@ module Scheemer
         @params.to_h.transform_keys { |key| key.to_s.underscore }
       end
 
+      alias to_hash to_h
+
       def each(&)
         return enum_for(:each) unless block_given?
 
@@ -65,6 +67,31 @@ module Scheemer
       end
 
       alias has_key? key?
+
+      def dig(key, *identifiers)
+        return @params.dig(key, *identifiers) unless @params.is_a?(Hash)
+
+        value = self[key]
+        return value if identifiers.empty? || value.nil?
+
+        value.dig(*identifiers)
+      end
+
+      def values_at(*keys)
+        return @params.values_at(*keys) unless @params.is_a?(Hash)
+
+        keys.map { |key| self[key] }
+      end
+
+      def empty?
+        @params.empty?
+      end
+
+      def size
+        @params.size
+      end
+
+      alias length size
 
       def multi_slice(key)
         return unless @params.is_a?(Hash)
