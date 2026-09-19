@@ -167,7 +167,7 @@ RSpec.describe Scheemer::Params do
 
     it "supports implicit hash conversion" do
       expect(Hash(record))
-        .to eql({ "some_value" => { nested_key: "testing" }, "other_value" => 1 })
+        .to eql({ "some_value" => { "nested_key" => "testing" }, "other_value" => 1 })
     end
   end
 
@@ -183,6 +183,22 @@ RSpec.describe Scheemer::Params do
 
       it "can iterate through the params" do
         expect(record.to_h).to eql({ "some_key" => ["testing"] })
+      end
+
+      it "returns a hash with indifferent access" do
+        result = record.to_h
+
+        expect(result).to be_a(ActiveSupport::HashWithIndifferentAccess)
+        expect(result[:some_key]).to eql(["testing"])
+        expect(result["some_key"]).to eql(["testing"])
+      end
+    end
+
+    context "with nested hashes" do
+      subject(:record) { klass.new({ someKey: { nestedKey: "testing" } }) }
+
+      it "preserves indifferent access for nested hashes" do
+        expect(record.to_h[:some_key]["nestedKey"]).to eql("testing")
       end
     end
 

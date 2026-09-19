@@ -4,6 +4,8 @@ require_relative "fallbacker"
 
 require_relative "extensions/string"
 
+require "active_support/core_ext/hash/indifferent_access"
+
 module Scheemer
   # This handles the conversion from the HTTP linguo (camelCase)
   # to Ruby linguo (snake_case), triggers the children's predefined
@@ -38,7 +40,9 @@ module Scheemer
       end
 
       def to_h
-        @params.to_h.transform_keys { |key| key.to_s.underscore }
+        ActiveSupport::HashWithIndifferentAccess.new(
+          @params.to_h.transform_keys { |key| key.to_s.underscore }
+        )
       end
 
       alias to_hash to_h

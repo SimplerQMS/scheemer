@@ -6,32 +6,16 @@ and data accessing on our services.
 
 ## Usage
 
-### Using the Scheemer
+### Endpoint parameter objects
 
-Scheemer::DSL ties together the parameters key translation and
-structural validation.
+`Scheemer::DSL` combines Dry Schema validation with convenient access to the
+validated parameters. Define the shape that the endpoint actually receives,
+then choose whether the validated payload is flat or wrapped.
 
-```ruby
-klass = Class.new do
-  extend Scheemer::DSL
+#### Flat parameters
 
-  params_mode :wrapped, root: :root
-
-  schema do
-    required(:root).hash do
-      required(:someValue).filled(:string)
-    end
-  end
-
-  on_missing path: "book.author.name", fallback_to: { "Stephen King" }
-end
-
-record = klass.new({ root: { someValue: "testing" } })
-record.some_value # => "testing"
-record.book.dig(:author, :name) # => "Stephen King"
-```
-
-Use flat mode when an endpoint does not wrap its parameters in a resource key:
+Use `:flat` for endpoints whose request parameters are not nested under a
+resource name:
 
 ```ruby
 class IndexParams
@@ -45,107 +29,185 @@ class IndexParams
   end
 end
 
-record = IndexParams.new({ status: "open", page: 2 })
-record[:status] # => "open"
+params = IndexParams.new({ status: "open", page: 2 })
+params[:status] # => "open"
+params.page      # => 2
+params.to_h      # => { "status" => "open", "page" => 2 }
+```
 
-# Validate and return a hash without retaining the Params object.
-IndexParams.call({ status: "open", page: 2 })
+When the endpoint only needs the normalized hash, use `.call` instead of
+keeping the parameter object:
+
+```ruby
+attributes = IndexParams.call({ status: "open", page: 2 })
 # => { "status" => "open", "page" => 2 }
 ```
 
-Wrapped mode requires an explicit root and unwraps that key after validation.
-Classes without a declared mode retain the legacy behavior of unwrapping the
-first validated value.
+#### Wrapped parameters
 
-#### Optional Extra Data
-
-When using the DSL, it's possible to inject extra parameters into your
-custom validations through the constructor. This can be helpful in
-cases where validations require access to outside data (e.g. database
-records, user session).
+Use `:wrapped` when the request follows the usual resource convention. The
+root must be named explicitly, so adding another top-level field cannot change
+which data is exposed by the object:
 
 ```ruby
-klass = Class.new do
+class CreateUserParams
   extend Scheemer::DSL
 
+  params_mode :wrapped, root: :user
+
   schema do
-    required(:root).hash do
-      required(:someValue).filled(:string)
+    required(:user).hash do
+      required(:emailAddress).filled(:string)
+      optional(:displayName).filled(:string)
     end
+  end
+end
+
+params = CreateUserParams.new(
+  { user: { emailAddress: "ada@example.com", displayName: "Ada" } }
+)
+
+params.email_address # => "ada@example.com"
+params[:displayName] # => "Ada"
+params.to_h          # => { "email_address" => "ada@example.com",
+                     #      "display_name" => "Ada" }
+```
+
+Classes without `params_mode` retain the legacy behavior of exposing the first
+validated top-level value. New classes should prefer an explicit mode.
+
+### Access and normalization
+
+Top-level keys can be accessed with methods, strings, or symbols. Snake case
+and camel case spellings are interchangeable:
+
+```ruby
+params.email_address       # => "ada@example.com"
+params[:email_address]     # => "ada@example.com"
+params["emailAddress"]     # => "ada@example.com"
+params.fetch(:email_address) # => "ada@example.com"
+params.key?("emailAddress")  # => true
+params.values_at(:email_address, :display_name)
+# => ["ada@example.com", "Ada"]
+```
+
+`[]` returns `nil` for a missing key. `fetch` raises `KeyError` unless a
+default or block is provided:
+
+```ruby
+params[:timezone]                  # => nil
+params.fetch(:timezone, "UTC")     # => "UTC"
+params.fetch(:timezone) { "UTC" }  # => "UTC"
+```
+
+`Params` includes `Enumerable`, so collection methods operate on the
+underlying hash or array. It also supports `dig`, `empty?`, `size`, `length`,
+`to_h`, and `to_hash`:
+
+```ruby
+params.size     # => 2
+params.empty?   # => false
+params.to_hash  # => same normalized, indifferent-access hash as to_h
+params.map(&:to_a)
+```
+
+`to_h` returns an `ActiveSupport::HashWithIndifferentAccess`, so string and
+symbol keys can be used interchangeably. Nested hashes also have indifferent
+access, although their key spelling is not converted to snake case:
+
+```ruby
+result = params.to_h
+result[:email_address] == result["email_address"] # => true
+result[:profile]["displayName"]                   # => "Ada"
+```
+
+Key normalization applies only to the top-level `Params` object. Nested hashes
+also have indifferent access, but their keys retain the spelling in the
+validated data:
+
+```ruby
+params.dig(:profile, :displayName) # nested lookup uses the hash's actual key
+```
+
+### Defaults and validation context
+
+`on_missing` fills a value before the validated payload is exposed. This is
+useful for endpoint defaults:
+
+```ruby
+class SearchParams
+  extend Scheemer::DSL
+
+  params_mode :flat
+
+  schema do
+    optional(:page).filled(:integer)
+    optional(:query).filled(:string)
+  end
+
+  on_missing path: "page", fallback_to: 1
+end
+
+SearchParams.call({})
+# => { "page" => 1 }
+```
+
+Extra constructor data is available to custom validation through `validate!`:
+
+```ruby
+class UpdateUserParams
+  extend Scheemer::DSL
+
+  params_mode :flat
+
+  schema do
+    required(:email).filled(:string)
   end
 
   def validate!(data)
-    p data[:records] # => [ ... ]
-    p data[:some_extra_value] # => "may be for validation"
+    raise "not allowed" unless data[:current_user].admin?
   end
 end
-record = klass.new(
-  { root: { someValue: "testing" } },
-  { records: [1, 2], some_extra_value: "may be for validation" }
+
+UpdateUserParams.new(
+  { email: "ada@example.com" },
+  { current_user: current_user }
 )
 ```
 
-### Using Scheemer::Params
+Invalid payloads raise `Scheemer::InvalidSchemaError` from `new` and `.call`.
 
-Scheemer::Params handles the parameters key translation.
+### Standalone modules
+
+Use `Scheemer::Params::DSL` when key translation is needed without schema
+validation:
 
 ```ruby
-klass = Class.new do
+class RawParams
   extend Scheemer::Params::DSL
-
-  def initialize(...)
-    super
-
-    ...
-  end
 end
 
-record = klass.new({ someValue: "testing" })
-record.some_value # => "testing"
-record[:some_value] # => "testing"
-record["someValue"] # => "testing"
-record.fetch(:some_value) # => "testing"
-record.key?(:some_value) # => true
-record.dig(:some_value) # => "testing"
-record.values_at(:some_value) # => ["testing"]
-record.size # => 1
-record.empty? # => false
-record.to_hash # => { "some_value" => "testing" }
+RawParams.new({ someValue: "testing" }).some_value # => "testing"
 ```
 
-Key translation applies to top-level access only. Values returned from nested
-hashes are ordinary hashes, so their keys retain the spelling used in the
-returned data.
-
-### Using Scheemer::Schema
-
-Scheemer::Schema::DSL handles the structural validation.
+Use `Scheemer::Schema::DSL` when only validation is needed:
 
 ```ruby
-klass = Class.new do
+class UserSchema
   extend Scheemer::Schema::DSL
 
   schema do
     required(:name).filled(:string)
   end
-
-  attr_reader :contents
-
-  def initialize(params)
-    @contents = self.class.validate_schema!(params)
-  end
 end
 
-klass.new({ name: 1 }) # => Error:'{:name=>['must be a string"]}"
+UserSchema.validate!({ name: "Ada" })
 ```
 
 ## Development
 
-```bash
-$ docker-compose run scheemer /bin/sh
-$ docker-compose run scheemer rspec
-$ docker-compose build scheemer
-```
+See [Development.md](Development.md) for setup, test, lint, and Docker
+commands.
 
 ## Installation
 
