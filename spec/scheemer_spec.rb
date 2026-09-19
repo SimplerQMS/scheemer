@@ -28,6 +28,73 @@ RSpec.describe Scheemer do
       end
     end
 
+    context "with flat params" do
+      let(:klass) do
+        Class.new do
+          extend Scheemer::DSL
+
+          params_mode :flat
+
+          schema do
+            required(:name).filled(:string)
+            required(:active).filled(:bool)
+          end
+        end
+      end
+
+      subject(:record) { klass.new({ name: "testing", active: true }) }
+
+      it "keeps the complete validated result" do
+        expect(record.to_h).to eql({ "name" => "testing", "active" => true })
+      end
+    end
+
+    context "with explicitly wrapped params" do
+      let(:klass) do
+        Class.new do
+          extend Scheemer::DSL
+
+          params_mode :wrapped, root: :user
+
+          schema do
+            required(:metadata).hash
+            required(:user).hash do
+              required(:name).filled(:string)
+            end
+          end
+        end
+      end
+
+      subject(:record) { klass.new({ metadata: {}, user: { name: "testing" } }) }
+
+      it "unwraps the configured root rather than the first value" do
+        expect(record.to_h).to eql({ "name" => "testing" })
+      end
+    end
+
+    describe ".params_mode" do
+      let(:klass) do
+        Class.new do
+          extend Scheemer::DSL
+        end
+      end
+
+      it "requires wrapped params to name their root" do
+        expect { klass.params_mode(:wrapped) }
+          .to raise_error(ArgumentError, /specify a root/)
+      end
+
+      it "rejects a root for flat params" do
+        expect { klass.params_mode(:flat, root: :user) }
+          .to raise_error(ArgumentError, /does not accept a root/)
+      end
+
+      it "rejects unknown modes" do
+        expect { klass.params_mode(:unknown) }
+          .to raise_error(ArgumentError, /flat, wrapped/)
+      end
+    end
+
     context "when passing in extra context data" do
       let(:klass) do
         Class.new do
