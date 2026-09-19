@@ -45,9 +45,14 @@ module Scheemer
         @params.each(&)
       end
 
+      def [](key)
+        multi_slice(key)&.values&.first
+      end
+
       def multi_slice(key)
         return unless @params.is_a?(Hash)
 
+        key = key.to_sym
         slices = [
           lambda(&:underscore),
           lambda(&:camelcase),
@@ -61,14 +66,14 @@ module Scheemer
       end
 
       def method_missing(name, *args, &)
-        slice = multi_slice(name.to_sym)
+        slice = multi_slice(name)
         return slice.values.first if slice&.any?
 
         super
       end
 
       def respond_to_missing?(name, include_private = false)
-        multi_slice(name.to_sym)&.any? || super
+        multi_slice(name)&.any? || super
       end
     end
   end

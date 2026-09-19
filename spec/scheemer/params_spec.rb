@@ -53,6 +53,28 @@ RSpec.describe Scheemer::Params do
     end
   end
 
+  describe "#[]" do
+    let(:klass) do
+      Class.new do
+        extend Scheemer::Params::DSL
+      end
+    end
+
+    subject(:record) { klass.new({ someValue: "testing" }) }
+
+    it "allows lookup with an underscored symbol" do
+      expect(record[:some_value]).to eql("testing")
+    end
+
+    it "allows lookup with a camelcase string" do
+      expect(record["someValue"]).to eql("testing")
+    end
+
+    it "returns nil for a missing key" do
+      expect(record[:missing]).to be_nil
+    end
+  end
+
   describe "#to_h" do
     let(:klass) do
       Class.new do
