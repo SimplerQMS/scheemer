@@ -95,6 +95,25 @@ RSpec.describe Scheemer do
       end
     end
 
+    describe ".call" do
+      let(:klass) do
+        Class.new do
+          extend Scheemer::DSL
+
+          params_mode :flat
+
+          schema do
+            required(:someValue).filled(:string)
+          end
+        end
+      end
+
+      it "validates params and returns a hash" do
+        expect(klass.call({ someValue: "testing" }))
+          .to eql({ "some_value" => "testing" })
+      end
+    end
+
     context "when passing in extra context data" do
       let(:klass) do
         Class.new do

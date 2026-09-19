@@ -27,6 +27,10 @@ module Scheemer
     def params_mode_configuration
       @params_mode_configuration || { mode: :legacy }.freeze
     end
+
+    def call(params, data = {})
+      new(params, data).to_h
+    end
   end
 
   module InstanceMethods
