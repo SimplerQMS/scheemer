@@ -70,8 +70,27 @@ RSpec.describe Scheemer::Params do
       expect(record["someValue"]).to eql("testing")
     end
 
+    it "allows lookup with a camelcase symbol" do
+      expect(record[:someValue]).to eql("testing")
+    end
+
+    it "allows lookup with an underscored string" do
+      expect(record["some_value"]).to eql("testing")
+    end
+
     it "returns nil for a missing key" do
       expect(record[:missing]).to be_nil
+    end
+
+    context "with a nil value" do
+      subject(:record) { klass.new({ someValue: nil }) }
+
+      it "distinguishes a present key from a missing key" do
+        expect(record[:some_value]).to be_nil
+        expect(record.key?(:some_value)).to be true
+        expect(record.key?(:missing)).to be false
+        expect(record.fetch(:some_value)).to be_nil
+      end
     end
   end
 
@@ -159,6 +178,10 @@ RSpec.describe Scheemer::Params do
       it "allows access to fields using underscored accessors" do
         expect(record.content).to eql({ fall: "back" })
         expect(record.someValue).to eql("testing")
+      end
+
+      it "allows lookup of fallbacks with []" do
+        expect(record[:content]).to eql({ fall: "back" })
       end
     end
   end
