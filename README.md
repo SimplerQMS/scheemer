@@ -74,7 +74,15 @@ end
 
 record = klass.new({ someValue: "testing" })
 record.some_value # => "testing"
+record[:some_value] # => "testing"
+record["someValue"] # => "testing"
+record.fetch(:some_value) # => "testing"
+record.key?(:some_value) # => true
 ```
+
+Key translation applies to top-level access only. Values returned from nested
+hashes are ordinary hashes, so their keys retain the spelling used in the
+returned data.
 
 ### Using Scheemer::Schema
 
