@@ -15,6 +15,8 @@ structural validation.
 klass = Class.new do
   extend Scheemer::DSL
 
+  params_mode :wrapped, root: :root
+
   schema do
     required(:root).hash do
       required(:someValue).filled(:string)
@@ -28,6 +30,32 @@ record = klass.new({ root: { someValue: "testing" } })
 record.some_value # => "testing"
 record.book.dig(:author, :name) # => "Stephen King"
 ```
+
+Use flat mode when an endpoint does not wrap its parameters in a resource key:
+
+```ruby
+class IndexParams
+  extend Scheemer::DSL
+
+  params_mode :flat
+
+  schema do
+    optional(:status).filled(:string)
+    optional(:page).filled(:integer)
+  end
+end
+
+record = IndexParams.new({ status: "open", page: 2 })
+record[:status] # => "open"
+
+# Validate and return a hash without retaining the Params object.
+IndexParams.call({ status: "open", page: 2 })
+# => { "status" => "open", "page" => 2 }
+```
+
+Wrapped mode requires an explicit root and unwraps that key after validation.
+Classes without a declared mode retain the legacy behavior of unwrapping the
+first validated value.
 
 #### Optional Extra Data
 
@@ -78,6 +106,11 @@ record[:some_value] # => "testing"
 record["someValue"] # => "testing"
 record.fetch(:some_value) # => "testing"
 record.key?(:some_value) # => true
+record.dig(:some_value) # => "testing"
+record.values_at(:some_value) # => ["testing"]
+record.size # => 1
+record.empty? # => false
+record.to_hash # => { "some_value" => "testing" }
 ```
 
 Key translation applies to top-level access only. Values returned from nested
