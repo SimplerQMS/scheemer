@@ -27,6 +27,8 @@ module Scheemer
     end
 
     module InstanceMethods
+      NOT_GIVEN = Object.new.freeze
+
       include Enumerable
 
       def initialize(params, data = {})
@@ -47,6 +49,15 @@ module Scheemer
 
       def [](key)
         multi_slice(key)&.values&.first
+      end
+
+      def fetch(key, default = NOT_GIVEN)
+        slice = multi_slice(key)
+        return slice.values.first if slice&.any?
+        return yield(key) if block_given?
+        return default unless default.equal?(NOT_GIVEN)
+
+        raise KeyError, "key not found: #{key.inspect}"
       end
 
       def multi_slice(key)

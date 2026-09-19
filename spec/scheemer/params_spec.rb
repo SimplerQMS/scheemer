@@ -75,6 +75,32 @@ RSpec.describe Scheemer::Params do
     end
   end
 
+  describe "#fetch" do
+    let(:klass) do
+      Class.new do
+        extend Scheemer::Params::DSL
+      end
+    end
+
+    subject(:record) { klass.new({ someValue: "testing" }) }
+
+    it "returns a matching value" do
+      expect(record.fetch(:some_value)).to eql("testing")
+    end
+
+    it "returns the default for a missing key" do
+      expect(record.fetch(:missing, "fallback")).to eql("fallback")
+    end
+
+    it "evaluates a block for a missing key" do
+      expect(record.fetch(:missing) { |key| key.to_s }).to eql("missing")
+    end
+
+    it "raises when no value or default is available" do
+      expect { record.fetch(:missing) }.to raise_error(KeyError)
+    end
+  end
+
   describe "#to_h" do
     let(:klass) do
       Class.new do
