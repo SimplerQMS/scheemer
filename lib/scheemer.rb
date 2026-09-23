@@ -32,11 +32,12 @@ module Scheemer
   module InstanceMethods
     def initialize(params, data = {})
       all_params = (params.respond_to?(:permit!) ? params.permit! : params).to_h
-      permitted = self.class.validate_schema!(all_params)
+      params_with_fallbacks = Fallbacker.apply(all_params, self.class.params_fallbacks)
+      permitted = self.class.validate_schema!(params_with_fallbacks)
 
       root_node = extract_root_node(permitted.to_h)
 
-      super(root_node, data.to_h)
+      super(root_node, data.to_h, fallbacks_applied: true)
     end
 
     private

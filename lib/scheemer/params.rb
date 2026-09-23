@@ -33,8 +33,12 @@ module Scheemer
 
       include Enumerable
 
-      def initialize(params, data = {})
-        @params = Fallbacker.apply(params, self.class.params_fallbacks)
+      def initialize(params, data = {}, fallbacks_applied: false)
+        @params = if fallbacks_applied
+                    params
+                  else
+                    Fallbacker.apply(params, self.class.params_fallbacks)
+                  end
 
         validate!(data.to_h) if respond_to?(:validate!)
       end

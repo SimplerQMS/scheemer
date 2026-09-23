@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    scheemer (3.6.0)
+    scheemer (3.7.0)
       activesupport (>= 7.0)
       dry-schema (~> 1.16)
 

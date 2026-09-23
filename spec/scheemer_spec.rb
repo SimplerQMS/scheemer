@@ -49,6 +49,70 @@ RSpec.describe Scheemer do
       end
     end
 
+    context "with schema-validated fallbacks" do
+      let(:klass) do
+        Class.new do
+          extend Scheemer::DSL
+
+          params_mode :flat
+
+          schema do
+            required(:attention_level).filled(:string, included_in?: %w[direct_attention ambient])
+            required(:settings).hash do
+              required(:mode).filled(:string)
+            end
+            required(:request_id).filled(:string)
+          end
+
+          on_missing path: :attention_level, fallback_to: "direct_attention"
+          on_missing path: "settings.mode", fallback_to: "standard"
+          on_missing path: :request_id, fallback_to: -> { "generated-request-id" }
+        end
+      end
+
+      it "validates and exposes a fallback for a missing required field" do
+        record = klass.new(settings: { mode: "custom" })
+
+        expect(record.attention_level).to eql("direct_attention")
+      end
+
+      it "preserves a supplied value instead of its fallback" do
+        record = klass.new(attention_level: "ambient", settings: { mode: "custom" })
+
+        expect(record.attention_level).to eql("ambient")
+      end
+
+      it "applies fallbacks at nested paths" do
+        record = klass.new(attention_level: "ambient", settings: {})
+
+        expect(record.dig(:settings, :mode)).to eql("standard")
+      end
+
+      it "evaluates a callable fallback only for a missing path" do
+        fallback = -> { "generated-request-id" }
+        allow(fallback).to receive(:call).and_call_original
+        klass.on_missing path: :request_id, fallback_to: fallback
+
+        klass.new(attention_level: "ambient", settings: { mode: "custom" }, request_id: "supplied")
+
+        expect(fallback).not_to have_received(:call)
+      end
+
+      it "validates fallback values through the schema" do
+        klass.on_missing path: :attention_level, fallback_to: "invalid"
+
+        expect(schema_violations_for(klass, settings: { mode: "custom" })).to eql(
+          schema_violations_for(klass, attention_level: "invalid", settings: { mode: "custom" })
+        )
+      end
+
+      def schema_violations_for(klass, params)
+        klass.new(params)
+      rescue Scheemer::InvalidSchemaError => e
+        e.violations
+      end
+    end
+
     context "with explicitly wrapped params" do
       let(:klass) do
         Class.new do

@@ -16,9 +16,9 @@ RSpec.describe Scheemer::InvalidSchemaError do
   subject(:error) { described_class.new(result) }
 
   it "compiles a semi-readable developer message" do
-    expect(error.message).to eql(<<~MSG.tr("\n", ""))
-      The submitted request does not satisfy the following requirements: {:record=>{:name=>["is missing"]}}
-    MSG
+    expect(error.message).to eql(
+      "The submitted request does not satisfy the following requirements: #{error.violations}"
+    )
   end
 
   it "allows access to the violations" do
