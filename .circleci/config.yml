@@ -1,13 +1,24 @@
 version: 2.1
 jobs:
   build:
+    parameters:
+      ruby_version:
+        type: string
     docker:
-      - image: ruby:3.2
+      - image: ruby:<< parameters.ruby_version >>
     steps:
       - checkout
       - run:
           name: Run the default task
           command: |
-            gem install bundler -v 2.3.21
+            gem install bundler -v 2.4.13
             bundle install
             bundle exec rake
+
+workflows:
+  test:
+    jobs:
+      - build:
+          matrix:
+            parameters:
+              ruby_version: ["3.2", "3.3", "3.4"]
