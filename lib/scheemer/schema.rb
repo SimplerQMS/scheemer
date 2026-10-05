@@ -19,10 +19,16 @@ module Scheemer
         @schema.validate(params)
       end
 
-      def validate_schema!(params)
+      def validate_schema!(params, ignored_paths: [])
         check_schema_exists!
 
-        @schema.validate!(params)
+        @schema.validate!(params, ignored_paths:)
+      end
+
+      def schema_key_names
+        check_schema_exists!
+
+        @schema.key_names
       end
 
       def json_schema(loose: false)
@@ -61,12 +67,30 @@ module Scheemer
       @definitions.call(params)
     end
 
-    def validate!(params)
+    FilteredResult = Struct.new(:errors)
+
+    # Errors at or below any of `ignored_paths` (arrays of keys) are dropped;
+    # an error is raised only if others remain.
+    def validate!(params, ignored_paths: [])
       validate(params).tap do |result|
         next if result.success?
 
-        raise InvalidSchemaError, result
+        errors = result.errors
+        remaining = errors.reject { |message| ignored_path?(message.path, ignored_paths) }
+        next if remaining.empty?
+
+        raise InvalidSchemaError, result if remaining.size == errors.count
+
+        raise InvalidSchemaError, FilteredResult.new(::Dry::Schema::MessageSet.new(remaining, errors.options))
       end
+    end
+
+    def ignored_path?(path, ignored_paths)
+      ignored_paths.any? { |ignored_path| path.first(ignored_path.size) == ignored_path }
+    end
+
+    def key_names
+      @definitions.key_map.map { |key| key.name.to_sym }
     end
 
     def json_schema(loose: false)

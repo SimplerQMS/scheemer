@@ -5,17 +5,31 @@ module Scheemer
     extend self
 
     def apply(params, fallbacks)
+      fill(params, fallbacks).first
+    end
+
+    # Returns the filled params and the `[keys, value]` pairs that were filled.
+    def fill(params, fallbacks)
       cloned_params = deep_dup(params)
 
-      fallbacks.each do |(path, value)|
+      filled = fallbacks.filter_map do |(path, value)|
         keys = path.to_s.split(".").map(&:to_sym)
 
         next if deep_key?(cloned_params, keys)
 
-        bury(cloned_params, keys, value.respond_to?(:call) ? value.call : value)
+        value = value.respond_to?(:call) ? value.call : deep_dup(value)
+        bury(cloned_params, keys, value)
+
+        [keys, value]
       end
 
-      cloned_params
+      [cloned_params, filled]
+    end
+
+    def restore(params, filled)
+      filled.each { |(keys, value)| bury(params, keys, value) }
+
+      params
     end
 
     private

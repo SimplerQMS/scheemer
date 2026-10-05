@@ -98,18 +98,195 @@ RSpec.describe Scheemer do
         expect(fallback).not_to have_received(:call)
       end
 
-      it "validates fallback values through the schema" do
+      it "does not validate fallback values" do
         klass.on_missing path: :attention_level, fallback_to: "invalid"
 
-        expect(schema_violations_for(klass, settings: { mode: "custom" })).to eql(
-          schema_violations_for(klass, attention_level: "invalid", settings: { mode: "custom" })
+        expect(klass.new(settings: { mode: "custom" }).attention_level).to eql("invalid")
+      end
+
+      it "still validates the same value when the caller supplies it" do
+        expect { klass.new(attention_level: "invalid", settings: { mode: "custom" }) }
+          .to raise_error(Scheemer::InvalidSchemaError)
+      end
+    end
+
+    context "with fallbacks that do not satisfy the schema" do
+      let(:klass) do
+        Class.new do
+          extend Scheemer::DSL
+
+          params_mode :flat
+
+          schema do
+            optional(:state).array(:string)
+            optional(:batch_id).filled(:string)
+            optional(:id).filled(:uuid_v7)
+            optional(:indirect_actor).value(included_in?: %w[author reviewer approver responsible])
+            optional(:name).filled(:string)
+          end
+
+          on_missing path: "state", fallback_to: "active"
+          on_missing path: "batch_id", fallback_to: -> {}
+          on_missing path: "id", fallback_to: -> {}
+          on_missing path: "indirect_actor", fallback_to: []
+        end
+      end
+
+      it "exposes the defaults exactly as declared" do
+        expect(klass.call({})).to eql(
+          { "state" => "active", "batch_id" => nil, "id" => nil, "indirect_actor" => [] }
         )
       end
 
-      def schema_violations_for(klass, params)
-        klass.new(params)
-      rescue Scheemer::InvalidSchemaError => e
-        e.violations
+      it "validates a mismatched value supplied by the caller" do
+        expect { klass.call(state: "active") }
+          .to raise_error(Scheemer::InvalidSchemaError) { |error| expect(error.violations).to have_key(:state) }
+      end
+
+      it "validates a nil value supplied by the caller" do
+        expect { klass.call(batch_id: nil) }.to raise_error(Scheemer::InvalidSchemaError)
+      end
+
+      it "validates an excluded value supplied by the caller" do
+        expect { klass.call(indirect_actor: "nobody") }.to raise_error(Scheemer::InvalidSchemaError)
+      end
+
+      it "reports only the caller-supplied errors" do
+        expect { klass.call(name: 1) }
+          .to raise_error(Scheemer::InvalidSchemaError) { |error|
+            expect(error.violations).to eql({ name: ["must be a string"] })
+          }
+      end
+    end
+
+    context "with fallbacks that opt into validation" do
+      let(:klass) do
+        Class.new do
+          extend Scheemer::DSL
+
+          params_mode :wrapped, root: :config
+
+          schema do
+            required(:config).hash do
+              optional(:state).array(:string)
+              optional(:page).filled(:integer)
+              optional(:name).filled(:string)
+            end
+          end
+
+          on_missing path: "state", fallback_to: "active", validate: true
+          on_missing path: "page", fallback_to: "2", validate: true
+          on_missing path: "name", fallback_to: nil
+        end
+      end
+
+      it "raises when the default does not satisfy the schema" do
+        expect { klass.call(config: {}) }
+          .to raise_error(Scheemer::InvalidSchemaError) { |error|
+            expect(error.violations).to eql({ config: { state: ["must be an array"] } })
+          }
+      end
+
+      it "exposes a valid default as coerced by the schema" do
+        klass.on_missing path: "state", fallback_to: ["active"], validate: true
+
+        expect(klass.call(config: {})).to eql({ "state" => ["active"], "page" => 2, "name" => nil })
+      end
+
+      it "stops validating a default declared again without the option" do
+        klass.on_missing path: "state", fallback_to: "active"
+
+        expect(klass.call(config: {})["state"]).to eql("active")
+      end
+    end
+
+    context "with a callable fallback returning a mutable value" do
+      let(:klass) do
+        Class.new do
+          extend Scheemer::DSL
+
+          params_mode :flat
+
+          schema do
+            optional(:tags).array(:string)
+          end
+
+          on_missing path: "tags", fallback_to: -> { [] }
+        end
+      end
+
+      it "returns a fresh value to each instance" do
+        klass.new({}).tags << "mutated"
+
+        expect(klass.new({}).tags).to eql([])
+      end
+    end
+
+    context "with fallbacks in wrapped mode" do
+      let(:klass) do
+        Class.new do
+          extend Scheemer::DSL
+
+          params_mode :wrapped, root: :config
+
+          schema do
+            required(:config).hash do
+              optional(:primary).filled(:bool)
+              required(:level).filled(:string)
+            end
+          end
+
+          on_missing path: "primary", fallback_to: false
+        end
+      end
+
+      it "resolves paths relative to the root" do
+        klass.on_missing path: "level", fallback_to: "x"
+
+        expect(klass.call(config: {})).to eql({ "primary" => false, "level" => "x" })
+      end
+
+      it "fills a missing required key" do
+        klass.on_missing path: "level", fallback_to: "x"
+
+        expect(klass.new(config: {}).level).to eql("x")
+      end
+
+      it "accepts a path that already starts with the root" do
+        klass.on_missing path: "config.level", fallback_to: "x"
+
+        expect(klass.call(config: {})).to eql({ "primary" => false, "level" => "x" })
+      end
+    end
+
+    context "with fallbacks in legacy mode" do
+      let(:klass) do
+        Class.new do
+          extend Scheemer::DSL
+
+          schema do
+            optional(:metadata).hash
+            required(:root).hash do
+              optional(:settings).hash do
+                optional(:mode).filled(:string)
+              end
+            end
+          end
+
+          on_missing path: "settings.mode", fallback_to: "standard"
+        end
+      end
+
+      it "resolves paths relative to the exposed root node" do
+        record = klass.new("root" => { "settings" => {} })
+
+        expect(record.dig(:settings, :mode)).to eql("standard")
+      end
+
+      it "preserves a supplied value" do
+        record = klass.new(root: { settings: { mode: "custom" } })
+
+        expect(record.dig(:settings, :mode)).to eql("custom")
       end
     end
 

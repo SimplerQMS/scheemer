@@ -19,12 +19,25 @@ module Scheemer
         entity.include(InstanceMethods)
       end
 
-      def on_missing(path:, fallback_to:)
-        params_fallbacks[path.to_sym] = fallback_to
+      # `validate: true` only has an effect with `Scheemer::DSL`, where it
+      # checks the default against the schema like a caller-supplied value.
+      def on_missing(path:, fallback_to:, validate: false)
+        path = path.to_sym
+        params_fallbacks[path] = fallback_to
+
+        if validate
+          validated_fallback_paths << path unless validated_fallback_paths.include?(path)
+        else
+          validated_fallback_paths.delete(path)
+        end
       end
 
       def params_fallbacks
         @params_fallbacks ||= {}
+      end
+
+      def validated_fallback_paths
+        @validated_fallback_paths ||= []
       end
     end
 

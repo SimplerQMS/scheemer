@@ -131,8 +131,8 @@ params.dig(:profile, :displayName) # nested lookup uses the hash's actual key
 
 ### Defaults and validation context
 
-`on_missing` fills a value before the validated payload is exposed. This is
-useful for endpoint defaults:
+`on_missing` fills a key that is missing from the caller's input. This is
+useful for endpoint defaults, including defaults for `required` keys:
 
 ```ruby
 class SearchParams
@@ -151,6 +151,51 @@ end
 SearchParams.call({})
 # => { "page" => 1 }
 ```
+
+Paths are dot-separated and relative to the node the object exposes:
+
+- `:flat` paths start at the top of the input.
+- `:wrapped` paths start inside the root, so with `root: :config`,
+  `on_missing path: "primary"` fills `config.primary`. A path that already
+  starts with the root (`"config.primary"`) is also accepted and is not
+  prefixed again.
+- Without `params_mode`, paths start inside the first validated top-level
+  value, the same node the object exposes.
+
+Defaults are filled before validation, so a `required` key with a default
+passes when the caller omits it. The default itself is never validated: errors
+at a filled path are ignored, and the value appears in the output exactly as
+declared. Values the caller sends are always validated, and any other errors
+still raise `Scheemer::InvalidSchemaError`:
+
+```ruby
+class ListParams
+  extend Scheemer::DSL
+
+  params_mode :flat
+
+  schema do
+    optional(:state).array(:string)
+  end
+
+  on_missing path: "state", fallback_to: "active"
+end
+
+ListParams.call({})                  # => { "state" => "active" }
+ListParams.call({ state: "active" }) # raises Scheemer::InvalidSchemaError
+```
+
+To catch a mistyped default, pass `validate: true`. That default is then
+validated like a caller-supplied value: if it does not satisfy the schema,
+`Scheemer::InvalidSchemaError` is raised, and if it does, the output holds the
+value as coerced by the schema:
+
+```ruby
+on_missing path: "state", fallback_to: ["active"], validate: true
+```
+
+Callable defaults (`fallback_to: -> { [] }`) are evaluated for each object, and
+static defaults are copied, so a default is never shared between objects.
 
 Extra constructor data is available to custom validation through `validate!`:
 

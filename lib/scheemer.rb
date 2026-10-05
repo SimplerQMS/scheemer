@@ -32,15 +32,67 @@ module Scheemer
   module InstanceMethods
     def initialize(params, data = {})
       all_params = (params.respond_to?(:permit!) ? params.permit! : params).to_h
-      params_with_fallbacks = Fallbacker.apply(all_params, self.class.params_fallbacks)
-      permitted = self.class.validate_schema!(params_with_fallbacks)
+      params_with_fallbacks, unvalidated = apply_fallbacks(all_params)
+      permitted = self.class.validate_schema!(params_with_fallbacks, ignored_paths: unvalidated.map(&:first))
 
-      root_node = extract_root_node(permitted.to_h)
+      root_node = extract_root_node(Fallbacker.restore(permitted.to_h, unvalidated))
 
       super(root_node, data.to_h, fallbacks_applied: true)
     end
 
     private
+
+    # Returns the filled params and the fills that must not be validated.
+    def apply_fallbacks(all_params)
+      paths = scoped_paths(all_params)
+      fallbacks = self.class.params_fallbacks.slice(*paths.keys).transform_keys(paths)
+      params_with_fallbacks, filled = Fallbacker.fill(all_params, fallbacks)
+      validated = validated_keys(paths)
+
+      [params_with_fallbacks, filled.reject { |(keys, _value)| validated.include?(keys) }]
+    end
+
+    def validated_keys(paths)
+      scoped = self.class.validated_fallback_paths.filter_map { |path| paths[path] }
+
+      scoped.map { |path| path.to_s.split(".").map(&:to_sym) }
+    end
+
+    # Maps each declared fallback path to a path from the top of the input.
+    # Fallback paths are relative to the node exposed by the params object;
+    # in wrapped mode, a path that already starts with the root is kept as is.
+    def scoped_paths(all_params)
+      declared = self.class.params_fallbacks.keys
+      configuration = self.class.params_mode_configuration
+
+      case configuration[:mode]
+      when :flat
+        declared.to_h { |path| [path, path] }
+      when :wrapped
+        declared.to_h { |path| [path, prefix_path(path, configuration[:root], skip_if_present: true)] }
+      else
+        legacy_scoped_paths(declared, all_params)
+      end
+    end
+
+    def legacy_scoped_paths(declared, all_params)
+      root = legacy_root_key(all_params)
+      return {} unless root
+
+      declared.to_h { |path| [path, prefix_path(path, root)] }
+    end
+
+    def prefix_path(path, root, skip_if_present: false)
+      return path if skip_if_present && path.to_s.split(".").first == root.to_s
+
+      :"#{root}.#{path}"
+    end
+
+    def legacy_root_key(all_params)
+      self.class.schema_key_names.find do |name|
+        all_params.key?(name) || all_params.key?(name.to_s)
+      end
+    end
 
     def extract_root_node(permitted)
       configuration = self.class.params_mode_configuration
