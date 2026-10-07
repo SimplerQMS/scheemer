@@ -339,6 +339,13 @@ RSpec.describe Scheemer do
             expect(error.violations).to eql({ root: { settings: { mode: ["must be a string"] } } })
           }
       end
+
+      it "uses the current fallback declaration after a previous construction" do
+        klass.new(root: {})
+        klass.on_missing path: "settings.mode", fallback_to: "updated"
+
+        expect(klass.new(root: {}).dig(:settings, :mode)).to eql("updated")
+      end
     end
 
     context "with explicitly wrapped params" do

@@ -43,34 +43,33 @@ module Scheemer
     private
 
     def apply_fallbacks(all_params)
-      paths = scoped_paths(all_params)
-      fallbacks = self.class.params_fallbacks.slice(*paths.keys).transform_keys(paths)
+      fallbacks = self.class.params_fallbacks
+      fallbacks = scoped_fallbacks(all_params, fallbacks) unless fallbacks.empty?
 
       Fallbacker.apply(all_params, fallbacks)
     end
 
-    # Maps each declared fallback path to a path from the top of the input.
+    # Resolves each declared fallback path from the top of the input.
     # Fallback paths are relative to the node exposed by the params object;
     # in wrapped mode, a path that already starts with the root is kept as is.
-    def scoped_paths(all_params)
-      declared = self.class.params_fallbacks.keys
+    def scoped_fallbacks(all_params, fallbacks)
       configuration = self.class.params_mode_configuration
 
       case configuration[:mode]
       when :flat
-        declared.to_h { |path| [path, path] }
+        fallbacks
       when :wrapped
-        declared.to_h { |path| [path, prefix_path(path, configuration[:root], skip_if_present: true)] }
+        fallbacks.transform_keys { |path| prefix_path(path, configuration[:root], skip_if_present: true) }
       else
-        legacy_scoped_paths(declared, all_params)
+        legacy_scoped_fallbacks(fallbacks, all_params)
       end
     end
 
-    def legacy_scoped_paths(declared, all_params)
+    def legacy_scoped_fallbacks(fallbacks, all_params)
       root = legacy_root_key(all_params)
       return {} unless root
 
-      declared.to_h { |path| [path, prefix_path(path, root)] }
+      fallbacks.transform_keys { |path| prefix_path(path, root) }
     end
 
     def prefix_path(path, root, skip_if_present: false)

@@ -76,7 +76,7 @@ module Scheemer
     end
 
     def key_names
-      @definitions.key_map.map { |key| key.name.to_sym }
+      @key_names ||= @definitions.key_map.map { |key| key.name.to_sym }.freeze
     end
 
     def json_schema(loose: false)
