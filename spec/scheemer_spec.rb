@@ -98,10 +98,13 @@ RSpec.describe Scheemer do
         expect(fallback).not_to have_received(:call)
       end
 
-      it "does not validate fallback values" do
+      it "validates fallback values through the schema" do
         klass.on_missing path: :attention_level, fallback_to: "invalid"
 
-        expect(klass.new(settings: { mode: "custom" }).attention_level).to eql("invalid")
+        expect { klass.new(settings: { mode: "custom" }) }
+          .to raise_error(Scheemer::InvalidSchemaError) { |error|
+            expect(error.violations).to eql({ attention_level: ["must be one of: direct_attention, ambient"] })
+          }
       end
 
       it "still validates the same value when the caller supplies it" do
@@ -132,10 +135,11 @@ RSpec.describe Scheemer do
         end
       end
 
-      it "exposes the defaults exactly as declared" do
-        expect(klass.call({})).to eql(
-          { "state" => "active", "batch_id" => nil, "id" => nil, "indirect_actor" => [] }
-        )
+      it "rejects all defaults that do not satisfy the schema" do
+        expect { klass.call({}) }
+          .to raise_error(Scheemer::InvalidSchemaError) { |error|
+            expect(error.violations.keys).to contain_exactly(:state, :batch_id, :id, :indirect_actor)
+          }
       end
 
       it "validates a mismatched value supplied by the caller" do
@@ -151,15 +155,16 @@ RSpec.describe Scheemer do
         expect { klass.call(indirect_actor: "nobody") }.to raise_error(Scheemer::InvalidSchemaError)
       end
 
-      it "reports only the caller-supplied errors" do
+      it "reports both default and caller-supplied errors" do
         expect { klass.call(name: 1) }
           .to raise_error(Scheemer::InvalidSchemaError) { |error|
-            expect(error.violations).to eql({ name: ["must be a string"] })
+            expect(error.violations.keys).to contain_exactly(:state, :batch_id, :id, :indirect_actor, :name)
+            expect(error.violations[:name]).to eql(["must be a string"])
           }
       end
     end
 
-    context "with fallbacks that opt into validation" do
+    context "with schema-validated wrapped fallbacks" do
       let(:klass) do
         Class.new do
           extend Scheemer::DSL
@@ -170,12 +175,12 @@ RSpec.describe Scheemer do
             required(:config).hash do
               optional(:state).array(:string)
               optional(:page).filled(:integer)
-              optional(:name).filled(:string)
+              optional(:name).maybe(:string)
             end
           end
 
-          on_missing path: "state", fallback_to: "active", validate: true
-          on_missing path: "page", fallback_to: "2", validate: true
+          on_missing path: "state", fallback_to: "active"
+          on_missing path: "page", fallback_to: "2"
           on_missing path: "name", fallback_to: nil
         end
       end
@@ -188,15 +193,46 @@ RSpec.describe Scheemer do
       end
 
       it "exposes a valid default as coerced by the schema" do
-        klass.on_missing path: "state", fallback_to: ["active"], validate: true
+        klass.on_missing path: "state", fallback_to: ["active"]
 
         expect(klass.call(config: {})).to eql({ "state" => ["active"], "page" => 2, "name" => nil })
       end
 
-      it "stops validating a default declared again without the option" do
-        klass.on_missing path: "state", fallback_to: "active"
+      it "preserves a caller-supplied value with string root and field keys" do
+        expect(klass.call("config" => { "state" => ["supplied"], "page" => "3" }))
+          .to eql({ "state" => ["supplied"], "page" => 3, "name" => nil })
+      end
+    end
 
-        expect(klass.call(config: {})["state"]).to eql("active")
+    context "with defaults for both a parent and a nested field" do
+      let(:klass) do
+        Class.new do
+          extend Scheemer::DSL
+
+          params_mode :flat
+
+          schema do
+            optional(:settings).hash do
+              optional(:page).filled(:integer)
+            end
+          end
+
+          on_missing path: "settings", fallback_to: {}
+          on_missing path: "settings.page", fallback_to: "bad"
+        end
+      end
+
+      it "validates nested defaults when the parent is also defaulted" do
+        expect { klass.call({}) }
+          .to raise_error(Scheemer::InvalidSchemaError) { |error|
+            expect(error.violations).to eql({ settings: { page: ["must be an integer"] } })
+          }
+      end
+
+      it "preserves coercion of nested defaults when the parent is also defaulted" do
+        klass.on_missing path: "settings.page", fallback_to: "2"
+
+        expect(klass.call({})).to eql({ "settings" => { "page" => 2 } })
       end
     end
 
@@ -252,6 +288,12 @@ RSpec.describe Scheemer do
         expect(klass.new(config: {}).level).to eql("x")
       end
 
+      it "fills required keys without a root prefix when the root is missing" do
+        klass.on_missing path: "level", fallback_to: "x"
+
+        expect(klass.call({})).to eql({ "primary" => false, "level" => "x" })
+      end
+
       it "accepts a path that already starts with the root" do
         klass.on_missing path: "config.level", fallback_to: "x"
 
@@ -287,6 +329,15 @@ RSpec.describe Scheemer do
         record = klass.new(root: { settings: { mode: "custom" } })
 
         expect(record.dig(:settings, :mode)).to eql("custom")
+      end
+
+      it "validates defaults declared without a root prefix" do
+        klass.on_missing path: "settings.mode", fallback_to: 1
+
+        expect { klass.call(root: {}) }
+          .to raise_error(Scheemer::InvalidSchemaError) { |error|
+            expect(error.violations).to eql({ root: { settings: { mode: ["must be a string"] } } })
+          }
       end
     end
 

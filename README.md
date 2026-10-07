@@ -162,11 +162,10 @@ Paths are dot-separated and relative to the node the object exposes:
 - Without `params_mode`, paths start inside the first validated top-level
   value, the same node the object exposes.
 
-Defaults are filled before validation, so a `required` key with a default
-passes when the caller omits it. The default itself is never validated: errors
-at a filled path are ignored, and the value appears in the output exactly as
-declared. Values the caller sends are always validated, and any other errors
-still raise `Scheemer::InvalidSchemaError`:
+Defaults are filled before validation and checked against the schema just like
+caller-supplied values. A `required` key with a valid default passes when the
+caller omits it. Invalid defaults raise `Scheemer::InvalidSchemaError`, and valid
+defaults appear in the output as coerced by the schema:
 
 ```ruby
 class ListParams
@@ -178,24 +177,15 @@ class ListParams
     optional(:state).array(:string)
   end
 
-  on_missing path: "state", fallback_to: "active"
+  on_missing path: "state", fallback_to: ["active"]
 end
 
-ListParams.call({})                  # => { "state" => "active" }
+ListParams.call({})                  # => { "state" => ["active"] }
 ListParams.call({ state: "active" }) # raises Scheemer::InvalidSchemaError
 ```
 
-To catch a mistyped default, pass `validate: true`. That default is then
-validated like a caller-supplied value: if it does not satisfy the schema,
-`Scheemer::InvalidSchemaError` is raised, and if it does, the output holds the
-value as coerced by the schema:
-
-```ruby
-on_missing path: "state", fallback_to: ["active"], validate: true
-```
-
-Callable defaults (`fallback_to: -> { [] }`) are evaluated for each object, and
-static defaults are copied, so a default is never shared between objects.
+Callable defaults (`fallback_to: -> { [] }`) are evaluated for each object.
+Static hash and array defaults have their containers copied for each object.
 
 Extra constructor data is available to custom validation through `validate!`:
 

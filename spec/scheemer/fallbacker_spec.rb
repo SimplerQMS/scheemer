@@ -57,19 +57,16 @@ RSpec.describe Scheemer::Fallbacker do
     end
   end
 
-  describe ".fill" do
+  describe ".apply" do
     subject(:result) do
-      described_class.fill(
+      described_class.apply(
         { "content" => { "key" => "old-key" } },
         { "content.key" => "new-key", "content.new_key" => "new-value" }
       )
     end
 
-    it "matches string keys and reports only the filled paths" do
-      params, filled = result
-
-      expect(params).to eql({ "content" => { "key" => "old-key", new_key: "new-value" } })
-      expect(filled).to eql([[%i[content new_key], "new-value"]])
+    it "matches string keys and fills only missing paths" do
+      expect(result).to eql({ "content" => { "key" => "old-key", new_key: "new-value" } })
     end
 
     it "does not share a static fallback value between calls" do

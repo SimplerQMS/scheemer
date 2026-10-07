@@ -19,10 +19,10 @@ module Scheemer
         @schema.validate(params)
       end
 
-      def validate_schema!(params, ignored_paths: [])
+      def validate_schema!(params)
         check_schema_exists!
 
-        @schema.validate!(params, ignored_paths:)
+        @schema.validate!(params)
       end
 
       def schema_key_names
@@ -67,26 +67,12 @@ module Scheemer
       @definitions.call(params)
     end
 
-    FilteredResult = Struct.new(:errors)
-
-    # Errors at or below any of `ignored_paths` (arrays of keys) are dropped;
-    # an error is raised only if others remain.
-    def validate!(params, ignored_paths: [])
+    def validate!(params)
       validate(params).tap do |result|
         next if result.success?
 
-        errors = result.errors
-        remaining = errors.reject { |message| ignored_path?(message.path, ignored_paths) }
-        next if remaining.empty?
-
-        raise InvalidSchemaError, result if remaining.size == errors.count
-
-        raise InvalidSchemaError, FilteredResult.new(::Dry::Schema::MessageSet.new(remaining, errors.options))
+        raise InvalidSchemaError, result
       end
-    end
-
-    def ignored_path?(path, ignored_paths)
-      ignored_paths.any? { |ignored_path| path.first(ignored_path.size) == ignored_path }
     end
 
     def key_names
