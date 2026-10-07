@@ -12,7 +12,8 @@ module Scheemer
 
         next if deep_key?(cloned_params, keys)
 
-        bury(cloned_params, keys, value.respond_to?(:call) ? value.call : value)
+        value = value.respond_to?(:call) ? value.call : deep_dup(value)
+        bury(cloned_params, keys, value)
       end
 
       cloned_params

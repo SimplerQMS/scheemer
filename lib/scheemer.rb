@@ -32,7 +32,7 @@ module Scheemer
   module InstanceMethods
     def initialize(params, data = {})
       all_params = (params.respond_to?(:permit!) ? params.permit! : params).to_h
-      params_with_fallbacks = Fallbacker.apply(all_params, self.class.params_fallbacks)
+      params_with_fallbacks = apply_fallbacks(all_params)
       permitted = self.class.validate_schema!(params_with_fallbacks)
 
       root_node = extract_root_node(permitted.to_h)
@@ -41,6 +41,48 @@ module Scheemer
     end
 
     private
+
+    def apply_fallbacks(all_params)
+      fallbacks = self.class.params_fallbacks
+      fallbacks = scoped_fallbacks(all_params, fallbacks) unless fallbacks.empty?
+
+      Fallbacker.apply(all_params, fallbacks)
+    end
+
+    # Resolves each declared fallback path from the top of the input.
+    # Fallback paths are relative to the node exposed by the params object;
+    # in wrapped mode, a path that already starts with the root is kept as is.
+    def scoped_fallbacks(all_params, fallbacks)
+      configuration = self.class.params_mode_configuration
+
+      case configuration[:mode]
+      when :flat
+        fallbacks
+      when :wrapped
+        fallbacks.transform_keys { |path| prefix_path(path, configuration[:root], skip_if_present: true) }
+      else
+        legacy_scoped_fallbacks(fallbacks, all_params)
+      end
+    end
+
+    def legacy_scoped_fallbacks(fallbacks, all_params)
+      root = legacy_root_key(all_params)
+      return {} unless root
+
+      fallbacks.transform_keys { |path| prefix_path(path, root) }
+    end
+
+    def prefix_path(path, root, skip_if_present: false)
+      return path if skip_if_present && path.to_s.split(".").first == root.to_s
+
+      :"#{root}.#{path}"
+    end
+
+    def legacy_root_key(all_params)
+      self.class.schema_key_names.find do |name|
+        all_params.key?(name) || all_params.key?(name.to_s)
+      end
+    end
 
     def extract_root_node(permitted)
       configuration = self.class.params_mode_configuration

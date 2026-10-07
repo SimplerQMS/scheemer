@@ -25,6 +25,12 @@ module Scheemer
         @schema.validate!(params)
       end
 
+      def schema_key_names
+        check_schema_exists!
+
+        @schema.key_names
+      end
+
       def json_schema(loose: false)
         @schema.json_schema(loose:)
       end
@@ -67,6 +73,10 @@ module Scheemer
 
         raise InvalidSchemaError, result
       end
+    end
+
+    def key_names
+      @key_names ||= @definitions.key_map.map { |key| key.name.to_sym }.freeze
     end
 
     def json_schema(loose: false)

@@ -58,12 +58,13 @@ module Scheemer
       end
 
       def [](key)
-        multi_slice(key)&.values&.first
+        matching_key = matching_param_key(key)
+        @params[matching_key] if matching_key
       end
 
       def fetch(key, default = NOT_GIVEN)
-        slice = multi_slice(key)
-        return slice.values.first if slice&.any?
+        matching_key = matching_param_key(key)
+        return @params[matching_key] if matching_key
         return yield(key) if block_given?
         return default unless default.equal?(NOT_GIVEN)
 
@@ -71,7 +72,7 @@ module Scheemer
       end
 
       def key?(key)
-        multi_slice(key)&.any? || false
+        !matching_param_key(key).nil?
       end
 
       alias has_key? key?
@@ -102,30 +103,34 @@ module Scheemer
       alias length size
 
       def multi_slice(key)
-        return unless @params.is_a?(Hash)
-
-        key = key.to_sym
-        slices = [
-          lambda(&:underscore),
-          lambda(&:camelcase),
-          ->(name) { name },
-        ].map { |a| @params.slice(a.call(key)) }
-         .reject(&:empty?)
-
-        return if slices.empty?
-
-        slices.first
+        matching_key = matching_param_key(key)
+        @params.slice(matching_key) if matching_key
       end
 
       def method_missing(name, *args, &)
-        slice = multi_slice(name)
-        return slice.values.first if slice&.any?
+        matching_key = matching_param_key(name)
+        return @params[matching_key] if matching_key
 
         super
       end
 
       def respond_to_missing?(name, include_private = false)
-        multi_slice(name)&.any? || super
+        !matching_param_key(name).nil? || super
+      end
+
+      private
+
+      def matching_param_key(key)
+        return unless @params.is_a?(Hash)
+
+        key = key.to_sym
+        underscored = key.underscore
+        return underscored if @params.key?(underscored)
+
+        camelcased = key.camelcase
+        return camelcased if @params.key?(camelcased)
+
+        key if @params.key?(key)
       end
     end
   end

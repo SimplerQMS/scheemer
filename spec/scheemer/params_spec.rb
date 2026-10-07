@@ -92,6 +92,47 @@ RSpec.describe Scheemer::Params do
         expect(record.fetch(:some_value)).to be_nil
       end
     end
+
+    context "with multiple matching spellings" do
+      subject(:record) { klass.new({ some_value: false, someValue: nil, some_Value: "exact" }) }
+
+      it "prefers snake case even when its value is false" do
+        expect(record[:some_Value]).to be false
+        expect(record.fetch(:some_Value)).to be false
+        expect(record.key?(:some_Value)).to be true
+        expect(record.some_Value).to be false
+        expect(record).to respond_to(:some_Value)
+      end
+
+      it "preserves the public slice reader" do
+        expect(record.multi_slice(:some_Value)).to eql({ some_value: false })
+      end
+    end
+
+    context "with camel case and exact spellings" do
+      subject(:record) { klass.new({ someValue: nil, some_Value: "exact" }) }
+
+      it "prefers camel case even when its value is nil" do
+        expect(record[:some_Value]).to be_nil
+        expect(record.fetch(:some_Value)).to be_nil
+        expect(record.key?(:some_Value)).to be true
+        expect(record.some_Value).to be_nil
+        expect(record).to respond_to(:some_Value)
+      end
+
+      it "includes present nil values in the public slice reader" do
+        expect(record.multi_slice(:some_Value)).to eql({ someValue: nil })
+      end
+    end
+
+    context "with only an exact spelling" do
+      subject(:record) { klass.new({ some_Value: "exact" }) }
+
+      it "uses the exact spelling when neither normalized spelling exists" do
+        expect(record[:some_Value]).to eql("exact")
+        expect(record.multi_slice(:missing)).to be_nil
+      end
+    end
   end
 
   describe "#fetch" do

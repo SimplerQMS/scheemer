@@ -131,8 +131,8 @@ params.dig(:profile, :displayName) # nested lookup uses the hash's actual key
 
 ### Defaults and validation context
 
-`on_missing` fills a value before the validated payload is exposed. This is
-useful for endpoint defaults:
+`on_missing` fills a key that is missing from the caller's input. This is
+useful for endpoint defaults, including defaults for `required` keys:
 
 ```ruby
 class SearchParams
@@ -151,6 +151,41 @@ end
 SearchParams.call({})
 # => { "page" => 1 }
 ```
+
+Paths are dot-separated and relative to the node the object exposes:
+
+- `:flat` paths start at the top of the input.
+- `:wrapped` paths start inside the root, so with `root: :config`,
+  `on_missing path: "primary"` fills `config.primary`. A path that already
+  starts with the root (`"config.primary"`) is also accepted and is not
+  prefixed again.
+- Without `params_mode`, paths start inside the first validated top-level
+  value, the same node the object exposes.
+
+Defaults are filled before validation and checked against the schema just like
+caller-supplied values. A `required` key with a valid default passes when the
+caller omits it. Invalid defaults raise `Scheemer::InvalidSchemaError`, and valid
+defaults appear in the output as coerced by the schema:
+
+```ruby
+class ListParams
+  extend Scheemer::DSL
+
+  params_mode :flat
+
+  schema do
+    optional(:state).array(:string)
+  end
+
+  on_missing path: "state", fallback_to: ["active"]
+end
+
+ListParams.call({})                  # => { "state" => ["active"] }
+ListParams.call({ state: "active" }) # raises Scheemer::InvalidSchemaError
+```
+
+Callable defaults (`fallback_to: -> { [] }`) are evaluated for each object.
+Static hash and array defaults have their containers copied for each object.
 
 Extra constructor data is available to custom validation through `validate!`:
 

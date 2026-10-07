@@ -57,6 +57,26 @@ RSpec.describe Scheemer::Fallbacker do
     end
   end
 
+  describe ".apply" do
+    subject(:result) do
+      described_class.apply(
+        { "content" => { "key" => "old-key" } },
+        { "content.key" => "new-key", "content.new_key" => "new-value" }
+      )
+    end
+
+    it "matches string keys and fills only missing paths" do
+      expect(result).to eql({ "content" => { "key" => "old-key", new_key: "new-value" } })
+    end
+
+    it "does not share a static fallback value between calls" do
+      fallbacks = { "tags" => [] }
+      described_class.apply({}, fallbacks)[:tags] << "mutated"
+
+      expect(described_class.apply({}, fallbacks)[:tags]).to eql([])
+    end
+  end
+
   context "when value is callable" do
     subject(:data) do
       described_class.apply(
